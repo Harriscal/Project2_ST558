@@ -1,3 +1,51 @@
+library(httr)
+library(jsonlite)
+library(tibble)
+library(dplyr)
+library(stringr)
+
+
+
+# Helper function to convert "City, State" into latitude and longitude
+get_lat_lon <- function(location) {
+  # Validate that input is in "City, ST" format
+  if (!grepl("^.+,\\s?[A-Z]{2}$", location)) {
+    stop("Invalid location format. Please enter as 'City, State' (e.g., Raleigh, NC).")
+  }
+  
+  # Build the Nominatim geocoding query
+  nominatim_url <- "https://nominatim.openstreetmap.org/search"
+  res <- httr::GET(
+    url = nominatim_url,
+    query = list(
+      q = paste(location, "USA"),  # example: "Raleigh, NC USA"
+      format = "json",
+      limit = 1,
+      addressdetails = 0
+    ),
+    user_agent("R-WeatherApp/1.0")  # Required by Nominatim's terms
+  )
+  
+  # Stop if request failed
+  httr::stop_for_status(res)
+  
+  # Parse JSON response
+  geo_data <- jsonlite::fromJSON(httr::content(res, as = "text", encoding = "UTF-8"))
+  
+  # Check if we got a result
+  if (length(geo_data) == 0) {
+    stop("Could not find location. Please check your input.")
+  }
+  
+  # Extract coordinates
+  lat <- as.numeric(geo_data$lat[1])
+  lon <- as.numeric(geo_data$lon[1])
+  
+  list(lat = lat, lon = lon)
+}
+
+
+
 get_weather_data <- function(location, start_date, end_date) {
   # Get latitude and longitude from the city, state input
   coords <- get_lat_lon(location)

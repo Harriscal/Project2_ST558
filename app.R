@@ -1,147 +1,136 @@
 library(shiny)
-library(shinyjs)
-library(httr)
-library(jsonlite)
-library(tibble)
-library(dplyr)
-library(stringr)
+library(shinydashboard)
 library(DT)
-
-#load helper function
+library(lubridate)
+library(shinyjs)
 source("helpers.R")
 
-ui <- navbarPage("Weather Insights App",
-                 
-                 # --- About Tab ---
-                 tabPanel("About",
-                          fluidPage(
-                            useShinyjs(),
-                            titlePanel("About This App"),
-                            fluidRow(
-                              column(8,
-                                     h4("Purpose"),
-                                     p("This app allows users to query historical daily weather data from the ",
-                                       a("Open-Meteo API", href = "https://open-meteo.com/en/docs", target = "_blank"),
-                                       " and explore trends in temperature, precipitation, cloud cover, and UV index."),
-                                     h4("Source Data"),
-                                     p("Weather data is obtained from the free Open-Meteo API, which provides 
-            global forecasts and historical weather variables."),
-                                     h4("App Structure"),
-                                     tags$ul(
-                                       tags$li(strong("About:"), " Overview of the app and data."),
-                                       tags$li(strong("Data Download:"), " Customize API queries and download weather data."),
-                                       tags$li(strong("Data Exploration:"), " View graphical and numerical summaries.")
-                                     )
-                              ),
-                              column(4,
-                                     img(src = "open-meteo-logo.png", width = "100%", alt = "Open-Meteo Logo")
-                              )
-                            )
-                          ),
-                          
-                 ),
-                 tabPanel("Data Download",
-                          fluidPage(
-                            titlePanel("Download Weather Data"),
-                            fluidRow(
-                              # Column for user inputs (left)
-                              column(
-                                width = 4,
-                                {
-                                    min_available_date <- Sys.Date() - 74  # 74 days of historical data
-                                    max_available_date <- Sys.Date() + 15  # API allows 15 days into the future
-                                    
-                                    tagList(
-                                      textInput("location", "Enter City, State (US):", placeholder = "e.g., Raleigh, NC"),
-                                      
-                                      dateInput("start_date", "Start Date:",
-                                                value = Sys.Date() - 7,
-                                                min = min_available_date,
-                                                max = max_available_date,
-                                                width = "100%"),
-                                      
-                                      dateInput("end_date", "End Date:",
-                                                value = Sys.Date(),
-                                                min = min_available_date,
-                                                max = max_available_date,
-                                                width = "100%"),
-                                      
-                                      actionButton("get_data", "Get Weather Data"),
-                                      
-                                      helpText(paste0(
-                                        "Note: Data is available from ",
-                                        format(min_available_date, "%B %d, %Y"), " to ",
-                                        format(max_available_date, "%B %d, %Y"), "."
-                                      ))
-                                    )
-                                }
-                              ),
-                              
-                              # Column for output (right)
-                              column(
-                                width = 8,
-                                uiOutput("warning_text"),
-                                br(),
-                                uiOutput("loading_spinner"),
-                                DTOutput("weather_table")
-                              )
-                            )
-                          )
-                 )
+valid_start <- Sys.Date() - 74
+valid_end <- Sys.Date() + 15
+
+all_vars <- c(
+  "Date", 
+  "Max Temp (°F)", 
+  "Min Temp (°F)", 
+  "Mean Temp (°F)", 
+  "Rainfall (in)", 
+  "UV Index", 
+  "Cloud Cover (%)", 
+  "Hot Day?"
+)
+
+ui <- dashboardPage(
+  skin = "green",
+  dashboardHeader(title = "Weather Insights App"),
+  dashboardSidebar(
+    sidebarMenu(
+      menuItem("About", tabName = "about", icon = icon("info-circle")),
+      menuItem("Data Download", tabName = "download", icon = icon("cloud-download-alt")),
+      menuItem("Data Exploration", tabName = "exploration", icon = icon("chart-line"))
+    )
+  ),
+  dashboardBody(
+    useShinyjs(),
+    tabItems(
+      # About Tab
+      tabItem(tabName = "about",
+              fluidRow(
+                box(
+                  width = 12,
+                  title = "About This App",
+                  status = "primary",
+                  solidHeader = TRUE,
+                  column(8,
+                         h4("Purpose"),
+                         p("This app allows users to query historical daily weather data from the ",
+                           a("Open-Meteo API", href = "https://open-meteo.com/en/docs", target = "_blank"),
+                           ", and explore trends in temperature, precipitation, cloud cover, and UV index."),
+                         h4("Source Data"),
+                         p("Weather data is obtained from the free Open-Meteo API, which provides global forecasts and historical weather variables."),
+                         h4("App Structure"),
+                         tags$ul(
+                           tags$li(strong("About:"), " Overview of the app and data."),
+                           tags$li(strong("Data Download:"), " Customize API queries and download weather data."),
+                           tags$li(strong("Data Exploration:"), " View graphical and numerical summaries.")
+                         )
+                  ),
+                  column(4,
+                         img(src = "open-meteo-logo.png", width = "100%", alt = "Open-Meteo Logo")
+                  )
+                )
+              )
+      ),
+      
+      # Data Download Tab
+      tabItem(tabName = "download",
+              fluidRow(
+                box(
+                  title = "Input",
+                  width = 4,
+                  status = "primary",
+                  textOutput("instructions"),
+                  textInput("location", "Enter City, ST (e.g., Raleigh, NC):", value = ""),
+                  dateInput("start_date", "Start Date:", value = Sys.Date() - 7, min = valid_start, max = valid_end),
+                  dateInput("end_date", "End Date:", value = Sys.Date(), min = valid_start, max = valid_end),
+                  helpText("Valid range:", format(valid_start), "to", format(valid_end)),
+                  checkboxGroupInput("vars_to_show", "Select Variables to Display:", choices = all_vars, selected = all_vars),
+                  actionButton("get_data", "Get Weather Data"),
+                  br(), br(),
+                  downloadButton("download_csv", "Download CSV", class = "btn-primary", disabled = TRUE)
+                ),
+                box(
+                  title = "Preview",
+                  width = 8,
+                  status = "info",
+                  DTOutput("weather_table")
+                )
+              )
+      ),
+      
+      # Data Exploration Tab
+      tabItem(tabName = "exploration",
+              h2("Data Exploration (Coming Soon)")
+      )
+    )
+  )
 )
 
 server <- function(input, output, session) {
-  # Helper to check if inputs are valid
-  is_valid_input <- reactive({
-    req(input$location, input$start_date, input$end_date)
-    days_apart <- as.numeric(difftime(input$end_date, input$start_date, units = "days"))
-    max_future <- as.numeric(difftime(input$end_date, Sys.Date(), units = "days"))
-    # Valid if: correct format, ≤ 15 days into future
-    grepl("^.+,\\s?[A-Z]{2}$", input$location) &&
-      days_apart >= 0 && max_future <= 15
-  })
+  output$instructions <- renderText("Enter a location as 'City, ST' (e.g., Raleigh, NC), set date range, then click 'Get Weather Data'.")
   
-  # Enable/disable button based on validation
+  weather_data <- reactiveVal()
+  
   observe({
-    toggleState("get_data", condition = is_valid_input())
+    shinyjs::disable("download_csv")
   })
-  
-  # Reactive value to store data
-  weather_data <- reactiveVal(NULL)
   
   observeEvent(input$get_data, {
-    output$warning_text <- renderUI({})
-    output$loading_spinner <- renderUI({
-      tags$div("Loading data...", style = "color: blue; font-weight: bold;")
-    })
+    req(input$location, input$start_date, input$end_date)
     
     tryCatch({
-      data <- get_weather_data(
-        location = input$location,
-        start_date = as.character(input$start_date),
-        end_date = as.character(input$end_date)
-      )
-      weather_data(data)
+      df <- get_weather_data(input$location, input$start_date, input$end_date)
+      weather_data(df)
+      shinyjs::enable("download_csv")
     }, error = function(e) {
-      weather_data(NULL)
-      output$warning_text <- renderUI({
-        tags$p(style = "color: red;", paste("Error:", e$message))
-      })
+      showNotification(paste("Error:", e$message), type = "error")
     })
-    
-    output$loading_spinner <- renderUI({})
   })
   
   output$weather_table <- renderDT({
-    req(weather_data())
-    datatable(
-      weather_data(),
-      options = list(pageLength = 10, scrollX = TRUE),
-      rownames = FALSE
-    )
+    req(weather_data(), input$vars_to_show)
+    df <- weather_data()[, input$vars_to_show, drop = FALSE]
+    datatable(df, options = list(pageLength = 10))
   })
   
+  output$download_csv <- downloadHandler(
+    filename = function() {
+      paste0("weather_data_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      df <- weather_data()[, input$vars_to_show, drop = FALSE]
+      write.csv(df, file, row.names = FALSE)
+    }
+  )
 }
 
-shinyApp(ui = ui, server = server)
-
+shinyApp(ui, server)

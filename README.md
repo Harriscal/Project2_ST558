@@ -49,7 +49,7 @@ Keep in mind, there is a helpers.r file that use as a source in the main app.r w
 You can install all the required packages with one line of code:
 
 install.packages(c("shiny", "shinydashboard", "DT", "lubridate", "shinyjs",
-                   "plotly", "bslib", "GGally", "dplyr", "ggplot2", "httr", "tibble", "dplyr", "stringr"))
+                   "plotly", "bslib", "GGally", "dplyr", "ggplot2", "httr", "tibble", "stringr"))
                    
 ## Run the App from GitHub
 

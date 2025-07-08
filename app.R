@@ -97,6 +97,7 @@ ui <- dashboardPage(
                   dateInput("start_date", "Start Date:", value = Sys.Date() - 7, min = valid_start, max = valid_end),
                   dateInput("end_date", "End Date:", value = Sys.Date(), min = valid_start, max = valid_end),
                   helpText("Valid range:", format(valid_start), "to", format(valid_end)),
+                  helpText("Date range must be within 74 days before and 15 days after today due to the free Open-Meteo API restrictions."),
                   checkboxGroupInput("vars_to_show", "Select Variables to Display:", choices = all_vars, selected = all_vars),
                   actionButton("get_data", "Get Weather Data"),
                   br(), br(),
@@ -354,7 +355,7 @@ server <- function(input, output, session) {
     df <- weather_data()
     df$Date <- as.Date(df$Date)
     p <- ggplot(df, aes(x = Date, y = `Mean Temp (°F)`, color = `Hot Day?`)) +
-      geom_line(size = 1) +
+      geom_line(linewidth = 1) +
       geom_point(size = 2) +
       labs(title = "Mean Temp Over Time by Hot Day", x = "Date", y = "Mean Temp (°F)") +
       theme_minimal() +
